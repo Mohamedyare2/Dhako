@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { createClient } from "@/lib/supabase/client";
-import { Trash2, Plus, Search, ShoppingCart } from "lucide-react";
+import { Trash2, Plus, Search, ShoppingCart, Printer, CheckCircle2, X } from "lucide-react";
 
 interface Product {
   id: string;
@@ -21,11 +21,25 @@ interface Customer {
   phone?: string;
 }
 
+interface ReceiptData {
+  saleId: string;
+  date: string;
+  customerName: string;
+  items: { name: string; quantity: number; price: number; subtotal: number }[];
+  totalAmount: number;
+  amountPaid: number;
+  change: number;
+  paymentStatus: string;
+}
+
 export default function NewSaleForm({ products, customers }: { products: Product[], customers: Customer[] }) {
   const router = useRouter();
   const supabase = createClient();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  // Receipt state
+  const [receipt, setReceipt] = useState<ReceiptData | null>(null);
 
   // Cart state
   const [cart, setCart] = useState<{ product: Product, quantity: number, price: number }[]>([]);
@@ -37,13 +51,13 @@ export default function NewSaleForm({ products, customers }: { products: Product
   const [isWalkIn, setIsWalkIn] = useState(true);
   const [customerId, setCustomerId] = useState("");
   const [customerNameRaw, setCustomerNameRaw] = useState("");
-  const [paymentStatus, setPaymentStatus] = useState("paid"); // paid, partial, credit
+  const [paymentStatus, setPaymentStatus] = useState("paid");
   const [amountPaid, setAmountPaid] = useState("");
 
   // Search filter
   const [search, setSearch] = useState("");
 
-  const filteredProducts = products.filter(p => 
+  const filteredProducts = products.filter(p =>
     p.name.toLowerCase().includes(search.toLowerCase()) && p.quantity_on_hand > 0
   );
 
@@ -70,16 +84,15 @@ export default function NewSaleForm({ products, customers }: { products: Product
           alert(`Kaliya ${product.quantity_on_hand} ayaa kaydka ku jira!`);
           return prev;
         }
-        return prev.map(item => 
-          item.product.id === product.id 
-            ? { ...item, quantity: item.quantity + q, price: price } 
+        return prev.map(item =>
+          item.product.id === product.id
+            ? { ...item, quantity: item.quantity + q, price: price }
             : item
         );
       }
       return [...prev, { product, quantity: q, price }];
     });
 
-    // Reset inputs
     setSelectedProductId("");
     setQtyInput("1");
     setPriceInput("");
@@ -111,10 +124,21 @@ export default function NewSaleForm({ products, customers }: { products: Product
 
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      
+
       const paidAmt = paymentStatus === 'paid' ? totalAmount : (paymentStatus === 'credit' ? 0 : parseFloat(amountPaid || "0"));
       const finalCustomerId = !isWalkIn && customerId ? customerId : null;
       const finalCustomerRaw = !isWalkIn && !customerId ? customerNameRaw : null;
+
+      // Determine customer display name
+      let customerDisplay = "Macmiil Caadi (Walk-in)";
+      if (!isWalkIn) {
+        if (customerId) {
+          const found = customers.find(c => c.id === customerId);
+          customerDisplay = found ? found.name : "Macmiil";
+        } else if (customerNameRaw) {
+          customerDisplay = customerNameRaw;
+        }
+      }
 
       // 1. Create Sale
       const { data: saleData, error: saleError } = await supabase
@@ -132,7 +156,7 @@ export default function NewSaleForm({ products, customers }: { products: Product
 
       if (saleError) throw new Error(saleError.message);
 
-      // 2. Create Sale Items & Update Inventory
+      // 2. Create Sale Items
       const saleItems = cart.map(item => ({
         sale_id: saleData.id,
         product_id: item.product.id,
@@ -151,8 +175,7 @@ export default function NewSaleForm({ products, customers }: { products: Product
           p_id: item.product.id,
           p_quantity: item.quantity
         });
-        
-        // If RPC doesn't exist, fallback to direct update (might have race conditions but works for now)
+
         if (updateError) {
           await supabase
             .from('products')
@@ -165,7 +188,7 @@ export default function NewSaleForm({ products, customers }: { products: Product
       if (paymentStatus === 'credit' || paymentStatus === 'partial') {
         const { error: creditError } = await supabase.from("credit_accounts").insert({
           customer_id: finalCustomerId,
-          customer_name_raw: finalCustomerRaw,
+          customer_name_raw: finalCustomerRaw || customerDisplay,
           amount_owed: totalAmount,
           amount_paid: paidAmt,
           status: 'open',
@@ -174,9 +197,26 @@ export default function NewSaleForm({ products, customers }: { products: Product
         if (creditError) throw new Error(creditError.message);
       }
 
-      router.push("/sales");
-      router.refresh();
-      
+      // 5. Show receipt instead of redirecting
+      const change = paymentStatus === 'paid' ? 0 : (paidAmt > totalAmount ? paidAmt - totalAmount : 0);
+      setReceipt({
+        saleId: saleData.id.slice(0, 8).toUpperCase(),
+        date: new Date().toLocaleString('so-SO', { dateStyle: 'full', timeStyle: 'short' }),
+        customerName: customerDisplay,
+        items: cart.map(item => ({
+          name: item.product.name,
+          quantity: item.quantity,
+          price: item.price,
+          subtotal: item.quantity * item.price
+        })),
+        totalAmount,
+        amountPaid: paidAmt,
+        change,
+        paymentStatus
+      });
+
+      setLoading(false);
+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
       setError(err.message || "Waxaa dhacday cillad");
@@ -184,18 +224,137 @@ export default function NewSaleForm({ products, customers }: { products: Product
     }
   };
 
+  const handlePrint = () => {
+    window.print();
+  };
+
+  const handleNewSale = () => {
+    setReceipt(null);
+    setCart([]);
+    setCustomerId("");
+    setCustomerNameRaw("");
+    setAmountPaid("");
+    setPaymentStatus("paid");
+    setIsWalkIn(true);
+    router.refresh();
+  };
+
+  // ===================== RECEIPT MODAL =====================
+  if (receipt) {
+    const statusLabel = receipt.paymentStatus === 'paid' ? 'La Bixiyay' : receipt.paymentStatus === 'credit' ? 'Deyn' : 'Qayb Bixiyay';
+    const statusColor = receipt.paymentStatus === 'paid' ? 'text-emerald-600' : receipt.paymentStatus === 'credit' ? 'text-rose-600' : 'text-amber-600';
+
+    return (
+      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 print:bg-white print:p-0">
+        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden print:shadow-none print:rounded-none print:max-w-none" id="receipt">
+          {/* Header */}
+          <div className="bg-slate-900 text-white p-6 text-center print:bg-slate-900">
+            <div className="w-14 h-14 bg-white/10 rounded-2xl flex items-center justify-center mx-auto mb-3">
+              <CheckCircle2 className="h-8 w-8 text-emerald-400" />
+            </div>
+            <h2 className="text-xl font-bold">Dhako POS</h2>
+            <p className="text-slate-400 text-sm mt-1">Rasiidhka Iibka (Receipt)</p>
+          </div>
+
+          {/* Receipt Body */}
+          <div className="p-6 space-y-4">
+            {/* Sale Info */}
+            <div className="flex justify-between text-sm">
+              <span className="text-slate-500">Lambarka Iibka</span>
+              <span className="font-mono font-bold text-slate-900">#{receipt.saleId}</span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span className="text-slate-500">Taariikhda</span>
+              <span className="font-medium text-slate-700 text-right text-xs">{receipt.date}</span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span className="text-slate-500">Macmiilka</span>
+              <span className="font-semibold text-slate-900">{receipt.customerName}</span>
+            </div>
+
+            <div className="border-t border-dashed border-slate-200 my-3" />
+
+            {/* Items */}
+            <div className="space-y-2">
+              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Alaabta La Iibiyay</p>
+              {receipt.items.map((item, i) => (
+                <div key={i} className="flex justify-between items-start text-sm">
+                  <div className="flex-1 pr-4">
+                    <p className="font-medium text-slate-900">{item.name}</p>
+                    <p className="text-xs text-slate-400">{item.quantity} × ${item.price.toFixed(2)}</p>
+                  </div>
+                  <span className="font-semibold text-slate-900">${item.subtotal.toFixed(2)}</span>
+                </div>
+              ))}
+            </div>
+
+            <div className="border-t border-dashed border-slate-200 my-3" />
+
+            {/* Totals */}
+            <div className="space-y-2">
+              <div className="flex justify-between text-sm">
+                <span className="text-slate-500">Wadarta Guud</span>
+                <span className="font-bold text-slate-900">${receipt.totalAmount.toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-slate-500">La Bixiyay</span>
+                <span className="font-bold text-slate-900">${receipt.amountPaid.toFixed(2)}</span>
+              </div>
+              {receipt.change > 0 && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-slate-500">Khasaaraha</span>
+                  <span className="font-bold text-emerald-600">${receipt.change.toFixed(2)}</span>
+                </div>
+              )}
+              <div className="flex justify-between items-center pt-2 border-t border-slate-200">
+                <span className="text-sm text-slate-500">Xaaladda Lacagta</span>
+                <span className={`text-sm font-bold ${statusColor}`}>{statusLabel}</span>
+              </div>
+            </div>
+
+            <div className="border-t border-dashed border-slate-200 my-3" />
+
+            <p className="text-center text-xs text-slate-400">
+              Mahadsanid! Thank you for your purchase.
+            </p>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="p-4 border-t border-slate-100 flex gap-3 print:hidden">
+            <Button
+              onClick={handlePrint}
+              className="flex-1 bg-slate-900 hover:bg-slate-800 text-white h-11 rounded-xl font-medium"
+            >
+              <Printer className="h-4 w-4 mr-2" />
+              Daabac (Print)
+            </Button>
+            <Button
+              onClick={handleNewSale}
+              variant="outline"
+              className="flex-1 h-11 rounded-xl border-slate-200 font-medium"
+            >
+              <X className="h-4 w-4 mr-2" />
+              Iib Cusub
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ===================== SALE FORM =====================
   return (
     <div className="grid gap-6 lg:grid-cols-12">
       {/* LEFT: PRODUCTS LIST & ADD TO CART */}
       <div className="lg:col-span-7 space-y-4">
         <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden p-6">
           <h3 className="font-semibold text-slate-900 mb-4">Alaabta (Products)</h3>
-          
+
           <div className="relative mb-4">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-            <Input 
-              type="search" 
-              placeholder="Raadi alaab..." 
+            <Input
+              type="search"
+              placeholder="Raadi alaab..."
               value={search}
               onChange={e => setSearch(e.target.value)}
               className="pl-9 h-10 border-slate-200 rounded-xl bg-slate-50 focus:bg-white"
@@ -204,12 +363,12 @@ export default function NewSaleForm({ products, customers }: { products: Product
 
           <div className="h-[300px] overflow-y-auto pr-2 space-y-2 mb-6">
             {filteredProducts.map(p => (
-              <div 
-                key={p.id} 
+              <div
+                key={p.id}
                 onClick={() => handleProductSelect(p)}
                 className={`p-3 rounded-xl border cursor-pointer transition-all ${
-                  selectedProductId === p.id 
-                    ? 'border-blue-500 bg-blue-50 ring-1 ring-blue-500' 
+                  selectedProductId === p.id
+                    ? 'border-blue-500 bg-blue-50 ring-1 ring-blue-500'
                     : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50'
                 }`}
               >
@@ -230,10 +389,10 @@ export default function NewSaleForm({ products, customers }: { products: Product
           <div className="flex items-end gap-3 p-4 bg-slate-50 rounded-xl border border-slate-200">
             <div className="grid gap-1.5 flex-1">
               <Label className="text-xs font-medium text-slate-600">Xabado (Qty)</Label>
-              <Input 
-                type="number" 
-                min="1" 
-                value={qtyInput} 
+              <Input
+                type="number"
+                min="1"
+                value={qtyInput}
                 onChange={e => setQtyInput(e.target.value)}
                 className="h-9 bg-white"
                 disabled={!selectedProductId}
@@ -241,18 +400,18 @@ export default function NewSaleForm({ products, customers }: { products: Product
             </div>
             <div className="grid gap-1.5 flex-1">
               <Label className="text-xs font-medium text-slate-600">Qiimaha / xabo ($)</Label>
-              <Input 
-                type="number" 
-                step="0.01" 
-                value={priceInput} 
+              <Input
+                type="number"
+                step="0.01"
+                value={priceInput}
                 onChange={e => setPriceInput(e.target.value)}
                 className="h-9 bg-white"
                 disabled={!selectedProductId}
               />
             </div>
-            <Button 
-              type="button" 
-              onClick={handleAddToCart} 
+            <Button
+              type="button"
+              onClick={handleAddToCart}
               disabled={!selectedProductId}
               className="h-9 bg-blue-600 hover:bg-blue-700 text-white shadow-sm px-6"
             >
@@ -294,8 +453,8 @@ export default function NewSaleForm({ products, customers }: { products: Product
                     </div>
                     <div className="flex items-center gap-3 shrink-0">
                       <span className="font-bold text-slate-900">${(item.quantity * item.price).toFixed(2)}</span>
-                      <button 
-                        type="button" 
+                      <button
+                        type="button"
                         onClick={() => removeFromCart(item.product.id)}
                         className="w-7 h-7 flex items-center justify-center text-rose-500 bg-rose-50 hover:bg-rose-100 rounded-md transition-colors"
                       >
@@ -330,8 +489,8 @@ export default function NewSaleForm({ products, customers }: { products: Product
 
                 {!isWalkIn && (
                   <div className="space-y-3 p-3 bg-white rounded-xl border border-slate-200">
-                    <select 
-                      value={customerId} 
+                    <select
+                      value={customerId}
                       onChange={e => setCustomerId(e.target.value)}
                       className="w-full text-sm h-9 border-slate-200 rounded-md focus:border-slate-900 focus:ring-0"
                     >
@@ -342,8 +501,8 @@ export default function NewSaleForm({ products, customers }: { products: Product
                       <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-slate-100"></div></div>
                       <div className="relative flex justify-center text-xs uppercase"><span className="bg-white px-2 text-slate-400">Ama (OR)</span></div>
                     </div>
-                    <Input 
-                      placeholder="Qor magac macmiil cusub..." 
+                    <Input
+                      placeholder="Qor magac macmiil cusub..."
                       value={customerNameRaw}
                       onChange={e => setCustomerNameRaw(e.target.value)}
                       className="h-9 text-sm border-slate-200 focus:border-slate-900"
@@ -371,9 +530,9 @@ export default function NewSaleForm({ products, customers }: { products: Product
 
                 {paymentStatus === 'partial' && (
                   <div className="mt-3">
-                    <Input 
+                    <Input
                       type="number" step="0.01" max={totalAmount} required
-                      placeholder="Imisa ayaa la bixiyay? ($)" 
+                      placeholder="Imisa ayaa la bixiyay? ($)"
                       value={amountPaid} onChange={e => setAmountPaid(e.target.value)}
                       className="h-10 text-sm border-slate-200 focus:border-slate-900 bg-white"
                     />

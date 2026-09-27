@@ -1,5 +1,12 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
-  <rect width="256" height="256" fill="#0f172a" rx="64" />
-  <path d="M72 104V72a24 24 0 0 1 24-24h64a24 24 0 0 1 24 24v32M40 104h176v88a24 24 0 0 1-24 24H64a24 24 0 0 1-24-24v-88z" fill="none" stroke="#e2e8f0" stroke-width="20" stroke-linecap="round" stroke-linejoin="round"/>
-  <circle cx="128" cy="152" r="16" fill="#e2e8f0" />
+  <!-- Background -->
+  <rect width="256" height="256" fill="#0f172a" rx="52"/>
+  
+  <!-- Letter D stylized -->
+  <text x="50%" y="58%" dominant-baseline="middle" text-anchor="middle"
+    font-family="Georgia, serif" font-size="148" font-weight="700"
+    fill="#ffffff" letter-spacing="-4">D</text>
+  
+  <!-- Bottom accent bar -->
+  <rect x="48" y="196" width="160" height="12" rx="6" fill="#3b82f6"/>
 </svg>
