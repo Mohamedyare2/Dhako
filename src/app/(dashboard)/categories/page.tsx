@@ -18,7 +18,7 @@ export default async function CategoriesPage() {
           <h2 className="text-2xl font-bold tracking-tight">Qaybaha (Categories)</h2>
           <p className="text-slate-500">Noocyada kala duwan ee alaabta (Filters, Oils, etc.)</p>
         </div>
-        <Button className="bg-slate-900 hover:bg-slate-800">
+        <Button className="bg-slate-900 hover:bg-slate-800 text-white">
           <Plus className="mr-2 h-4 w-4" />
           Ku Dar Qayb
         </Button>
