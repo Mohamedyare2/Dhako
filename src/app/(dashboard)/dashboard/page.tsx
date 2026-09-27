@@ -23,6 +23,7 @@ export default async function DashboardPage() {
 
   // Calculate profit: (selling_price - cost_price) * quantity
   // Using an explicit type for 'r' since TypeScript might not infer the inner joined 'products' type properly
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const todayProfit = todaySaleItemsData?.reduce((sum, r: any) => {
     const cost = r.products?.cost_price || 0;
     const profitPerItem = Number(r.unit_price) - Number(cost);
