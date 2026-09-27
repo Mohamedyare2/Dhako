@@ -1,0 +1,22 @@
+INSERT INTO categories (name_so, name_en, description) VALUES
+('Filtarada', 'Filters', 'Oil, air, and fuel filters'),
+('Shaka Khafis', 'Shock Absorbers', 'Front and rear shock absorbers'),
+('Rabadh Kaabaan', 'Wheel Bearings/Mounts', 'Rubber mounts and bearings'),
+('Buush', 'Bushings', 'Various suspension and mechanical bushings'),
+('Kaanweys', 'Tie Rods / Steering', 'Steering components'),
+('Boolbeerin', 'Ball Bearings', 'Mechanical bearings'),
+('Muraadyad Haad', 'Windshield / Wipers', 'Glass and wiper components'),
+('Khashaafad', 'Clutch Components', 'Clutch plates and components'),
+('Laydhadhka', 'Lighting', 'Headlights, taillights, bulbs (Indho, Lambad, Guluub)'),
+('Lamdado', 'Seals / Gaskets', 'Engine and mechanical seals'),
+('Bool / Baanad', 'Nuts & Bolts', 'Hardware, bolts, nuts'),
+('Saliid / Dacawo', 'Oils & Fluids', 'Engine oil, brake fluid, hydraulic oil, additives'),
+('Tuubo', 'Hoses & Tubes', 'Rubber and metal hoses'),
+('Abwaal', 'Washers', 'Hardware washers'),
+('Xidhiidhiye', 'Linkages', 'Connectors and linkage parts'),
+('Qalab / Tools', 'Tools', 'Spanners (Dhanbaraas), cutting discs (Dhagax moole)'),
+('Siiq', 'Springs', 'Coil and leaf springs'),
+('Kiliish / Okiyo', 'Keys & Locks', 'Ignition keys and locks'),
+('Koronto / Electrical', 'Electrical', 'Connectors, switches, fuses'),
+('Guud / General', 'General Parts', 'Other miscellaneous parts')
+ON CONFLICT (name_so) DO NOTHING;
