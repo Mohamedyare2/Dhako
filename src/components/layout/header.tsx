@@ -86,20 +86,20 @@ export function Header({ setMobileMenuOpen }: { setMobileMenuOpen: (open: boolea
               <span className="text-sm font-medium hidden sm:block">Account</span>
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-52 shadow-xl border-slate-200">
-            <DropdownMenuLabel className="text-xs text-slate-500 font-normal">Logged in as</DropdownMenuLabel>
-            <DropdownMenuLabel className="pt-0 text-slate-900">Admin</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem asChild>
+          <DropdownMenuContent align="end" className="w-52 shadow-xl border-slate-800 bg-slate-900 text-white">
+            <DropdownMenuLabel className="text-xs text-slate-400 font-normal">Logged in as</DropdownMenuLabel>
+            <DropdownMenuLabel className="pt-0 text-white">Admin</DropdownMenuLabel>
+            <DropdownMenuSeparator className="bg-slate-800" />
+            <DropdownMenuItem asChild className="focus:bg-slate-800 focus:text-white">
               <Link href="/settings" className="cursor-pointer">
-                <Settings className="mr-2 h-4 w-4 text-slate-500" />
+                <Settings className="mr-2 h-4 w-4 text-slate-400" />
                 Settings
               </Link>
             </DropdownMenuItem>
-            <DropdownMenuSeparator />
+            <DropdownMenuSeparator className="bg-slate-800" />
             <DropdownMenuItem
               onClick={handleLogout}
-              className="text-red-600 focus:text-red-600 focus:bg-red-50 cursor-pointer"
+              className="text-red-400 focus:text-red-400 focus:bg-red-950/50 cursor-pointer"
             >
               <LogOut className="mr-2 h-4 w-4" />
               Sign out
