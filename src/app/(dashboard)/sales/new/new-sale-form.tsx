@@ -163,7 +163,7 @@ export default function NewSaleForm({ products, customers }: { products: Product
         product_name_raw: item.product.name,
         quantity: item.quantity,
         unit_price: item.price,
-        subtotal: item.quantity * item.price
+        total_price: item.quantity * item.price
       }));
 
       const { error: itemsError } = await supabase.from("sale_items").insert(saleItems);
