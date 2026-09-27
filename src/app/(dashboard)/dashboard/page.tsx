@@ -8,20 +8,27 @@ export default async function DashboardPage() {
   const [
     { count: totalProducts },
     { count: lowStockCount },
-    { data: todaySalesData },
+    { data: todaySaleItemsData },
     { data: openCreditData },
     { data: recentSales },
     { data: lowStockItems },
   ] = await Promise.all([
     supabase.from("products").select("*", { count: "exact", head: true }).eq("status", "active"),
     supabase.from("products").select("*", { count: "exact", head: true }).lt("quantity_on_hand", 5),
-    supabase.from("sales").select("total_amount").gte("sale_date", new Date().toISOString().split("T")[0]),
+    supabase.from("sale_items").select("quantity, unit_price, products(cost_price)").gte("created_at", new Date().toISOString().split("T")[0]),
     supabase.from("credit_accounts").select("amount_owed, amount_paid").eq("status", "open"),
     supabase.from("sales").select("*, customers(name)").order("sale_date", { ascending: false }).limit(6),
     supabase.from("products").select("name, quantity_on_hand, min_stock_level").lt("quantity_on_hand", 5).limit(6),
   ])
 
-  const todayRevenue = todaySalesData?.reduce((s, r) => s + Number(r.total_amount), 0) ?? 0
+  // Calculate profit: (selling_price - cost_price) * quantity
+  // Using an explicit type for 'r' since TypeScript might not infer the inner joined 'products' type properly
+  const todayProfit = todaySaleItemsData?.reduce((sum, r: any) => {
+    const cost = r.products?.cost_price || 0;
+    const profitPerItem = Number(r.unit_price) - Number(cost);
+    return sum + (profitPerItem * Number(r.quantity));
+  }, 0) ?? 0;
+
   const openCredit = openCreditData?.reduce((s, r) => s + (Number(r.amount_owed) - Number(r.amount_paid)), 0) ?? 0
 
   const stats = [
@@ -46,10 +53,10 @@ export default async function DashboardPage() {
       trend: "warn",
     },
     {
-      title: "Revenue Today",
-      value: todayRevenue.toFixed(2),
+      title: "Faa'iidada Maanta",
+      value: todayProfit.toFixed(2),
       suffix: "$",
-      desc: "Total sales revenue today",
+      desc: "Wadarta faa'iidada maanta",
       icon: TrendingUp,
       iconBg: "bg-emerald-50",
       iconColor: "text-emerald-600",
