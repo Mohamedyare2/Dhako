@@ -79,7 +79,7 @@ export default function AddProductPage() {
             </div>
 
             <div className="pt-4">
-              <Button type="submit" className="w-full bg-slate-900" disabled={loading}>
+              <Button type="submit" className="w-full bg-slate-900 text-white hover:bg-slate-800" disabled={loading}>
                 {loading ? "Saving..." : "Save Product"}
               </Button>
             </div>

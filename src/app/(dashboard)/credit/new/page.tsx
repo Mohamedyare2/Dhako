@@ -75,7 +75,7 @@ export default function AddCustomerDebtPage() {
               <Button type="button" variant="outline" onClick={() => router.back()} className="w-full">
                 Cancel
               </Button>
-              <Button type="submit" className="w-full bg-slate-900 hover:bg-slate-800" disabled={loading}>
+              <Button type="submit" className="w-full bg-slate-900 text-white hover:bg-slate-800" disabled={loading}>
                 {loading ? "Wuu xareynayaa..." : "Save (Kaydi)"}
               </Button>
             </div>

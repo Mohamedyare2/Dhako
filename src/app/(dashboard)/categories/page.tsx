@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server"
 import { Button } from "@/components/ui/button"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Plus } from "lucide-react"
+import Link from "next/link"
 
 export default async function CategoriesPage() {
   const supabase = createClient()
@@ -18,10 +19,12 @@ export default async function CategoriesPage() {
           <h2 className="text-2xl font-bold tracking-tight">Qaybaha (Categories)</h2>
           <p className="text-slate-500">Noocyada kala duwan ee alaabta (Filters, Oils, etc.)</p>
         </div>
-        <Button className="bg-slate-900 hover:bg-slate-800 text-white">
-          <Plus className="mr-2 h-4 w-4" />
-          Ku Dar Qayb
-        </Button>
+        <Link href="/categories/new">
+          <Button className="bg-slate-900 hover:bg-slate-800 text-white">
+            <Plus className="mr-2 h-4 w-4" />
+            Ku Dar Qayb
+          </Button>
+        </Link>
       </div>
 
       <div className="rounded-md border bg-white">
