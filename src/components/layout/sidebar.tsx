@@ -54,8 +54,38 @@ const navGroups = [
   },
 ];
 
+import { useEffect, useState } from "react";
+import { createClient } from "@/lib/supabase/client";
+
 export function Sidebar() {
   const pathname = usePathname();
+  const [isAdmin, setIsAdmin] = useState(false);
+  const supabase = createClient();
+
+  useEffect(() => {
+    async function checkRole() {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data } = await supabase.from("profiles").select("role").eq("id", user.id).single();
+        if (data?.role === 'admin') setIsAdmin(true);
+      }
+    }
+    checkRole();
+  }, [supabase]);
+
+  // Filter groups based on role
+  const filteredNavGroups = navGroups.map(group => {
+    let filteredItems = group.items;
+    
+    // Hide specific routes from non-admins
+    if (!isAdmin) {
+      filteredItems = group.items.filter(item => 
+        !['/reports', '/business-debts', '/settings'].includes(item.href)
+      );
+    }
+    
+    return { ...group, items: filteredItems };
+  }).filter(group => group.items.length > 0);
 
   return (
     <div className="flex h-full w-64 flex-col sidebar-gradient text-white border-r border-white/5">
@@ -74,7 +104,7 @@ export function Sidebar() {
 
       {/* Navigation */}
       <div className="flex-1 overflow-y-auto py-4 px-3 space-y-5">
-        {navGroups.map((group) => (
+        {filteredNavGroups.map((group) => (
           <div key={group.label}>
             <div className="px-3 mb-1.5">
               <span className="text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-500">

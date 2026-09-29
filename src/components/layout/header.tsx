@@ -1,5 +1,7 @@
 "use client";
 
+import React from "react";
+
 import { Menu, LogOut, User, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -31,6 +33,22 @@ export function Header({ setMobileMenuOpen }: { setMobileMenuOpen: (open: boolea
   const router = useRouter();
   const pathname = usePathname();
   const supabase = createClient();
+  const [isAdmin, setIsAdmin] = React.useState(false);
+  const [userRole, setUserRole] = React.useState("Staff");
+
+  React.useEffect(() => {
+    async function checkRole() {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data } = await supabase.from("profiles").select("role").eq("id", user.id).single();
+        if (data?.role === 'admin') {
+          setIsAdmin(true);
+          setUserRole("Admin");
+        }
+      }
+    }
+    checkRole();
+  }, [supabase]);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -66,12 +84,14 @@ export function Header({ setMobileMenuOpen }: { setMobileMenuOpen: (open: boolea
 
       {/* Right side actions */}
       <div className="flex items-center gap-2">
-        {/* Settings shortcut */}
-        <Link href="/settings">
-          <Button variant="ghost" size="icon" className="text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded-full">
-            <Settings className="h-4.5 w-4.5" />
-          </Button>
-        </Link>
+        {/* Settings shortcut (Admin only) */}
+        {isAdmin && (
+          <Link href="/settings">
+            <Button variant="ghost" size="icon" className="text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded-full">
+              <Settings className="h-4.5 w-4.5" />
+            </Button>
+          </Link>
+        )}
 
         {/* User menu */}
         <DropdownMenu>
@@ -88,15 +108,17 @@ export function Header({ setMobileMenuOpen }: { setMobileMenuOpen: (open: boolea
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-52 shadow-xl border-slate-800 bg-slate-900 text-white">
             <DropdownMenuLabel className="text-xs text-slate-400 font-normal">Logged in as</DropdownMenuLabel>
-            <DropdownMenuLabel className="pt-0 text-white">Admin</DropdownMenuLabel>
+            <DropdownMenuLabel className="pt-0 text-white">{userRole}</DropdownMenuLabel>
             <DropdownMenuSeparator className="bg-slate-800" />
-            <DropdownMenuItem asChild className="focus:bg-slate-800 focus:text-white">
-              <Link href="/settings" className="cursor-pointer">
-                <Settings className="mr-2 h-4 w-4 text-slate-400" />
-                Settings
-              </Link>
-            </DropdownMenuItem>
-            <DropdownMenuSeparator className="bg-slate-800" />
+            {isAdmin && (
+              <DropdownMenuItem asChild className="focus:bg-slate-800 focus:text-white">
+                <Link href="/settings" className="cursor-pointer">
+                  <Settings className="mr-2 h-4 w-4 text-slate-400" />
+                  Settings
+                </Link>
+              </DropdownMenuItem>
+            )}
+            {isAdmin && <DropdownMenuSeparator className="bg-slate-800" />}
             <DropdownMenuItem
               onClick={handleLogout}
               className="text-red-400 focus:text-red-400 focus:bg-red-950/50 cursor-pointer"

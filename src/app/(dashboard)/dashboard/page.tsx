@@ -62,6 +62,7 @@ export default async function DashboardPage() {
       iconBg: "bg-emerald-50",
       iconColor: "text-emerald-600",
       trend: "up",
+      adminOnly: true,
     },
     {
       title: "Outstanding Credit",
@@ -72,8 +73,19 @@ export default async function DashboardPage() {
       iconBg: "bg-rose-50",
       iconColor: "text-rose-600",
       trend: "down",
+      adminOnly: true,
     },
-  ]
+  ];
+
+  // Get current user role
+  const { data: { user } } = await supabase.auth.getUser();
+  let isAdmin = false;
+  if (user) {
+    const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single();
+    isAdmin = profile?.role === 'admin';
+  }
+
+  const visibleStats = isAdmin ? stats : stats.filter(s => !s.adminOnly);
 
   return (
     <div className="space-y-8 fade-in">
@@ -85,7 +97,7 @@ export default async function DashboardPage() {
 
       {/* Stats Grid */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {stats.map((stat) => (
+        {visibleStats.map((stat) => (
           <div
             key={stat.title}
             className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-sm card-hover"
