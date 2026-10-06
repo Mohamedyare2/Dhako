@@ -94,8 +94,8 @@ export default async function CreditAccountsPage({
                   </TableCell>
                   <TableCell className="text-slate-600">{credit.description || "—"}</TableCell>
                   <TableCell className="text-slate-500 text-xs whitespace-nowrap">
-                    <div>{new Date(credit.created_at).toLocaleDateString("so-SO", { day: "2-digit", month: "short", year: "numeric" })}</div>
-                    <div className="text-slate-400">{new Date(credit.created_at).toLocaleTimeString("so-SO", { hour: "2-digit", minute: "2-digit" })}</div>
+                    <div>{new Date(credit.created_at).toLocaleDateString("so-SO", { day: "2-digit", month: "short", year: "numeric", timeZone: "Africa/Nairobi" })}</div>
+                    <div className="text-slate-400">{new Date(credit.created_at).toLocaleTimeString("so-SO", { hour: "2-digit", minute: "2-digit", timeZone: "Africa/Nairobi" })}</div>
                   </TableCell>
                   <TableCell className="text-right font-bold text-rose-600">
                     ${Number(credit.amount_owed).toFixed(2)}
