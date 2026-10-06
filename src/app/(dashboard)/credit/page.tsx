@@ -29,7 +29,7 @@ export default async function CreditAccountsPage({
   let dbQuery = supabase
     .from("credit_accounts")
     .select("*, customers(name)")
-    .order("amount_owed", { ascending: false })
+    .order("created_at", { ascending: false })
 
   if (query) {
     dbQuery = dbQuery.ilike("customer_name_raw", `%${query}%`)
@@ -62,6 +62,7 @@ export default async function CreditAccountsPage({
             <TableRow className="bg-slate-50/80 border-b border-slate-200">
               <TableHead className="font-semibold text-slate-700 pl-6">Macmiilka (Customer)</TableHead>
               <TableHead className="font-semibold text-slate-700">Faahfaahin (Description)</TableHead>
+              <TableHead className="font-semibold text-slate-700">Taariikhda</TableHead>
               <TableHead className="text-right font-semibold text-slate-700">Deynta (Total Owed)</TableHead>
               <TableHead className="text-right font-semibold text-slate-700">Haraaga (Remaining)</TableHead>
               <TableHead className="font-semibold text-slate-700">Xaalada (Status)</TableHead>
@@ -71,14 +72,14 @@ export default async function CreditAccountsPage({
           <TableBody>
             {error && (
               <TableRow>
-                <TableCell colSpan={6} className="h-24 text-center text-rose-600 bg-rose-50/50">
+                <TableCell colSpan={7} className="h-24 text-center text-rose-600 bg-rose-50/50">
                   Cillad: {error.message}
                 </TableCell>
               </TableRow>
             )}
             {!error && credits?.length === 0 && (
               <TableRow>
-                <TableCell colSpan={6} className="py-16 text-center">
+                <TableCell colSpan={7} className="py-16 text-center">
                   <CreditCard className="h-8 w-8 text-slate-300 mx-auto mb-2" />
                   <p className="text-sm text-slate-400">Deyn ma jirto</p>
                 </TableCell>
@@ -92,6 +93,10 @@ export default async function CreditAccountsPage({
                     {credit.customers?.name || credit.customer_name_raw}
                   </TableCell>
                   <TableCell className="text-slate-600">{credit.description || "—"}</TableCell>
+                  <TableCell className="text-slate-500 text-xs whitespace-nowrap">
+                    <div>{new Date(credit.created_at).toLocaleDateString("so-SO", { day: "2-digit", month: "short", year: "numeric" })}</div>
+                    <div className="text-slate-400">{new Date(credit.created_at).toLocaleTimeString("so-SO", { hour: "2-digit", minute: "2-digit" })}</div>
+                  </TableCell>
                   <TableCell className="text-right font-bold text-rose-600">
                     ${Number(credit.amount_owed).toFixed(2)}
                   </TableCell>

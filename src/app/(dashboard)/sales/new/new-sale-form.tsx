@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { createClient } from "@/lib/supabase/client";
-import { Trash2, Plus, Search, ShoppingCart, Printer, CheckCircle2, X } from "lucide-react";
+import { Trash2, Plus, Search, ShoppingCart, Printer, CheckCircle2, X, FileText, Tag } from "lucide-react";
 
 interface Product {
   id: string;
@@ -53,15 +53,24 @@ export default function NewSaleForm({ products, customers }: { products: Product
   const [customerNameRaw, setCustomerNameRaw] = useState("");
   const [paymentStatus, setPaymentStatus] = useState("paid");
   const [amountPaid, setAmountPaid] = useState("");
+  const [discountPercent, setDiscountPercent] = useState(0);
+  const [showQuotation, setShowQuotation] = useState(false);
 
   // Search filter
   const [search, setSearch] = useState("");
+  const [customerSearch, setCustomerSearch] = useState("");
 
   const filteredProducts = products.filter(p =>
     p.name.toLowerCase().includes(search.toLowerCase()) && p.quantity_on_hand > 0
   );
 
-  const totalAmount = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+  const filteredCustomers = customers.filter(c =>
+    c.name.toLowerCase().includes(customerSearch.toLowerCase())
+  );
+
+  const subtotalAmount = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+  const discountAmount = subtotalAmount * (discountPercent / 100);
+  const totalAmount = subtotalAmount - discountAmount;
 
   const handleAddToCart = () => {
     if (!selectedProductId) return;
@@ -236,6 +245,9 @@ export default function NewSaleForm({ products, customers }: { products: Product
     setAmountPaid("");
     setPaymentStatus("paid");
     setIsWalkIn(true);
+    setDiscountPercent(0);
+    setShowQuotation(false);
+    setCustomerSearch("");
     router.refresh();
   };
 
@@ -335,6 +347,113 @@ export default function NewSaleForm({ products, customers }: { products: Product
             >
               <X className="h-4 w-4 mr-2" />
               Iib Cusub
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ===================== QUOTATION MODAL =====================
+  if (showQuotation) {
+    const quotCustomer = !isWalkIn
+      ? (customerId ? customers.find(c => c.id === customerId)?.name || "Macmiil" : customerNameRaw || "Macmiil")
+      : "Walk-in Customer";
+
+    return (
+      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 print:bg-white print:p-0">
+        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden print:shadow-none print:rounded-none print:max-w-none" id="quotation">
+          {/* Header */}
+          <div className="bg-slate-900 text-white p-6 text-center print:bg-slate-900">
+            <div className="w-14 h-14 bg-white/10 rounded-2xl flex items-center justify-center mx-auto mb-3">
+              <FileText className="h-8 w-8 text-blue-400" />
+            </div>
+            <h2 className="text-xl font-bold">Dhako POS</h2>
+            <p className="text-slate-400 text-sm mt-1">Warqadda Qiimaha (Quotation)</p>
+          </div>
+
+          {/* Quotation Body */}
+          <div className="p-6 space-y-4">
+            <div className="flex justify-between text-sm">
+              <span className="text-slate-500">Taariikhda</span>
+              <span className="font-medium text-slate-700 text-right text-xs">
+                {new Date().toLocaleString('so-SO', { dateStyle: 'full', timeStyle: 'short' })}
+              </span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span className="text-slate-500">Macmiilka</span>
+              <span className="font-semibold text-slate-900">{quotCustomer}</span>
+            </div>
+
+            <div className="border-t border-dashed border-slate-200 my-3" />
+
+            {/* Items */}
+            <div className="space-y-2">
+              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Liiska Alaabta</p>
+              <div className="grid grid-cols-12 text-xs font-semibold text-slate-400 pb-1 border-b border-slate-100">
+                <span className="col-span-5">Alaabta</span>
+                <span className="col-span-2 text-center">Qty</span>
+                <span className="col-span-2 text-right">Qiimaha</span>
+                <span className="col-span-3 text-right">Wadarta</span>
+              </div>
+              {cart.map((item, i) => (
+                <div key={i} className="grid grid-cols-12 text-sm items-center">
+                  <span className="col-span-5 font-medium text-slate-900 text-xs">{item.product.name}</span>
+                  <span className="col-span-2 text-center text-slate-500">{item.quantity}</span>
+                  <span className="col-span-2 text-right text-slate-600">${item.price.toFixed(2)}</span>
+                  <span className="col-span-3 text-right font-semibold text-slate-900">${(item.quantity * item.price).toFixed(2)}</span>
+                </div>
+              ))}
+            </div>
+
+            <div className="border-t border-dashed border-slate-200 my-3" />
+
+            {/* Totals */}
+            <div className="space-y-2">
+              <div className="flex justify-between text-sm">
+                <span className="text-slate-500">Wadarta Asal (Subtotal)</span>
+                <span className="font-semibold text-slate-900">${subtotalAmount.toFixed(2)}</span>
+              </div>
+              {discountPercent > 0 && (
+                <>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-slate-500 flex items-center gap-1"><Tag className="h-3 w-3" />Qiimo Dhimis ({discountPercent}%)</span>
+                    <span className="font-semibold text-rose-500">-${discountAmount.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between items-center pt-2 border-t border-slate-200">
+                    <span className="text-sm font-bold text-slate-700">Wadarta Dhammaad</span>
+                    <span className="text-lg font-black text-emerald-600">${totalAmount.toFixed(2)}</span>
+                  </div>
+                </>
+              )}
+              {discountPercent === 0 && (
+                <div className="flex justify-between items-center pt-2 border-t border-slate-200">
+                  <span className="text-sm font-bold text-slate-700">Wadarta Guud</span>
+                  <span className="text-lg font-black text-emerald-600">${totalAmount.toFixed(2)}</span>
+                </div>
+              )}
+            </div>
+
+            <div className="border-t border-dashed border-slate-200 my-3" />
+            <p className="text-center text-xs text-slate-400">Warqaddan waxay muujinaysaa qiimaha alaabta. Mahadsanid!</p>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="p-4 border-t border-slate-100 flex gap-3 print:hidden">
+            <Button
+              onClick={() => window.print()}
+              className="flex-1 bg-slate-900 hover:bg-slate-800 text-white h-11 rounded-xl font-medium"
+            >
+              <Printer className="h-4 w-4 mr-2" />
+              Daabac (Print)
+            </Button>
+            <Button
+              onClick={() => setShowQuotation(false)}
+              variant="outline"
+              className="flex-1 h-11 rounded-xl border-slate-200 font-medium"
+            >
+              <X className="h-4 w-4 mr-2" />
+              Ku Noqo
             </Button>
           </div>
         </div>
@@ -468,10 +587,56 @@ export default function NewSaleForm({ products, customers }: { products: Product
           </div>
 
           <div className="p-5 border-t border-slate-100 bg-slate-50 space-y-5">
-            <div className="flex justify-between items-center">
-              <span className="text-slate-500 font-medium">Total Amount</span>
-              <span className="text-2xl font-black text-emerald-600">${totalAmount.toFixed(2)}</span>
+            {/* Subtotal & Discount */}
+            <div className="space-y-2">
+              {discountPercent > 0 && (
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-slate-500">Wadarta Asal</span>
+                  <span className="font-semibold text-slate-600">${subtotalAmount.toFixed(2)}</span>
+                </div>
+              )}
+              {discountPercent > 0 && (
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-slate-500 flex items-center gap-1"><Tag className="h-3.5 w-3.5 text-rose-400" />Qiimo Dhimis ({discountPercent}%)</span>
+                  <span className="font-semibold text-rose-500">-${discountAmount.toFixed(2)}</span>
+                </div>
+              )}
+              <div className="flex justify-between items-center">
+                <span className="text-slate-500 font-medium">Total Amount</span>
+                <span className="text-2xl font-black text-emerald-600">${totalAmount.toFixed(2)}</span>
+              </div>
             </div>
+
+            {/* Discount input */}
+            <div className="flex items-center gap-2 p-3 bg-white rounded-xl border border-slate-200">
+              <Tag className="h-4 w-4 text-slate-400 shrink-0" />
+              <Label className="text-xs font-medium text-slate-600 shrink-0">Qiimo Dhimis %</Label>
+              <Input
+                type="number"
+                min={0}
+                max={100}
+                step={1}
+                value={discountPercent || ""}
+                onChange={e => setDiscountPercent(Math.min(100, Math.max(0, parseFloat(e.target.value) || 0)))}
+                placeholder="0"
+                className="h-8 text-sm border-slate-200 focus:border-slate-900 bg-slate-50 flex-1"
+              />
+              <span className="text-xs text-slate-400 shrink-0">%</span>
+            </div>
+
+            {/* Quotation Button */}
+            <Button
+              type="button"
+              onClick={() => {
+                if (cart.length === 0) { setError("Fadlan ku dar alaabta cart-ka"); return; }
+                setShowQuotation(true);
+              }}
+              variant="outline"
+              className="w-full h-10 rounded-xl border-blue-200 text-blue-700 hover:bg-blue-50 font-medium"
+            >
+              <FileText className="h-4 w-4 mr-2" />
+              Warqadda Qiimaha (Quotation)
+            </Button>
 
             <div className="space-y-4 pt-4 border-t border-slate-200">
               <div>
@@ -489,13 +654,27 @@ export default function NewSaleForm({ products, customers }: { products: Product
 
                 {!isWalkIn && (
                   <div className="space-y-3 p-3 bg-white rounded-xl border border-slate-200">
+                    {/* Search box for existing customers */}
+                    <div className="relative">
+                      <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-400" />
+                      <Input
+                        type="search"
+                        placeholder="Raadi macmiil ku jira..."
+                        value={customerSearch}
+                        onChange={e => {
+                          setCustomerSearch(e.target.value);
+                          setCustomerId(""); // reset selection when searching
+                        }}
+                        className="pl-9 h-9 text-sm border-slate-200 bg-slate-50 focus:bg-white"
+                      />
+                    </div>
                     <select
                       value={customerId}
                       onChange={e => setCustomerId(e.target.value)}
                       className="w-full text-sm h-9 border-slate-200 rounded-md focus:border-slate-900 focus:ring-0"
                     >
                       <option value="">-- Dooro Macmiil (Existing) --</option>
-                      {customers.map(c => <option key={c.id} value={c.id}>{c.name} {c.phone ? `(${c.phone})` : ''}</option>)}
+                      {filteredCustomers.map(c => <option key={c.id} value={c.id}>{c.name} {c.phone ? `(${c.phone})` : ''}</option>)}
                     </select>
                     <div className="relative">
                       <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-slate-100"></div></div>
