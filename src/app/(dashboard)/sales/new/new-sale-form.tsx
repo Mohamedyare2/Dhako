@@ -654,28 +654,59 @@ export default function NewSaleForm({ products, customers }: { products: Product
 
                 {!isWalkIn && (
                   <div className="space-y-3 p-3 bg-white rounded-xl border border-slate-200">
-                    {/* Search box for existing customers */}
+                    {/* Autocomplete for existing customers */}
                     <div className="relative">
-                      <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-400" />
+                      <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-400 z-10" />
                       <Input
-                        type="search"
-                        placeholder="Raadi macmiil ku jira..."
+                        type="text"
+                        placeholder="Raadi oo dooro macmiil..."
                         value={customerSearch}
                         onChange={e => {
                           setCustomerSearch(e.target.value);
-                          setCustomerId(""); // reset selection when searching
+                          setCustomerId("");
                         }}
+                        onFocus={() => setCustomerSearch(customerSearch)}
                         className="pl-9 h-9 text-sm border-slate-200 bg-slate-50 focus:bg-white"
+                        autoComplete="off"
                       />
+                      {/* Suggestion list — shows automatically when typing */}
+                      {customerSearch.trim() !== "" && filteredCustomers.length > 0 && !customerId && (
+                        <div className="absolute top-full left-0 right-0 z-50 mt-1 bg-white border border-slate-200 rounded-xl shadow-lg overflow-hidden max-h-44 overflow-y-auto">
+                          {filteredCustomers.map(c => (
+                            <button
+                              key={c.id}
+                              type="button"
+                              onClick={() => {
+                                setCustomerId(c.id);
+                                setCustomerSearch(c.name);
+                                setCustomerNameRaw("");
+                              }}
+                              className="w-full text-left px-4 py-2.5 text-sm hover:bg-slate-50 flex items-center gap-2 border-b border-slate-50 last:border-0"
+                            >
+                              <span className="font-medium text-slate-900">{c.name}</span>
+                              {c.phone && <span className="text-xs text-slate-400">{c.phone}</span>}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                      {/* No results message */}
+                      {customerSearch.trim() !== "" && filteredCustomers.length === 0 && !customerId && (
+                        <div className="absolute top-full left-0 right-0 z-50 mt-1 bg-white border border-slate-200 rounded-xl shadow-lg px-4 py-3 text-xs text-slate-400">
+                          Macmiil la mid ah lama helin
+                        </div>
+                      )}
                     </div>
-                    <select
-                      value={customerId}
-                      onChange={e => setCustomerId(e.target.value)}
-                      className="w-full text-sm h-9 border-slate-200 rounded-md focus:border-slate-900 focus:ring-0"
-                    >
-                      <option value="">-- Dooro Macmiil (Existing) --</option>
-                      {filteredCustomers.map(c => <option key={c.id} value={c.id}>{c.name} {c.phone ? `(${c.phone})` : ''}</option>)}
-                    </select>
+                    {/* Show selected customer badge */}
+                    {customerId && (
+                      <div className="flex items-center justify-between bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2">
+                        <span className="text-sm font-medium text-emerald-800">✓ {customerSearch}</span>
+                        <button
+                          type="button"
+                          onClick={() => { setCustomerId(""); setCustomerSearch(""); }}
+                          className="text-xs text-emerald-600 hover:text-rose-600 ml-2"
+                        >✕</button>
+                      </div>
+                    )}
                     <div className="relative">
                       <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-slate-100"></div></div>
                       <div className="relative flex justify-center text-xs uppercase"><span className="bg-white px-2 text-slate-400">Ama (OR)</span></div>
