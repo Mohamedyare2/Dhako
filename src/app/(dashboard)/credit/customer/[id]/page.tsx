@@ -97,7 +97,7 @@ export default async function CustomerProfilePage({ params }: { params: { id: st
                 <TableRow key={credit.id} className="table-row-hover border-b border-slate-100 last:border-0">
                   <TableCell className="text-slate-600 pl-6">{credit.description || "—"}</TableCell>
                   <TableCell className="text-slate-500 text-xs whitespace-nowrap">
-                    <div>{new Date(credit.created_at).toLocaleDateString("so-SO", { day: "2-digit", month: "short", year: "numeric", timeZone: "Africa/Nairobi" })}</div>
+                    <div>{new Date(credit.created_at).toLocaleDateString("en-GB", { day: "2-digit", month: "2-digit", year: "numeric", timeZone: "Africa/Nairobi" })}</div>
                     <div className="text-slate-400">{new Date(credit.created_at).toLocaleTimeString("so-SO", { hour: "2-digit", minute: "2-digit", timeZone: "Africa/Nairobi" })}</div>
                   </TableCell>
                   <TableCell className="text-right font-bold text-rose-600">

@@ -13,10 +13,11 @@ import { LiveSearch } from "@/components/ui/live-search"
 export default async function CreditAccountsPage({
   searchParams,
 }: {
-  searchParams: { q?: string }
+  searchParams: { q?: string, date?: string }
 }) {
   const supabase = createClient()
   const query = searchParams.q || ""
+  const filterDate = searchParams.date || ""
   
   // Verify admin role
   const { data: { user } } = await supabase.auth.getUser()
@@ -33,6 +34,13 @@ export default async function CreditAccountsPage({
 
   if (query) {
     dbQuery = dbQuery.ilike("customer_name_raw", `%${query}%`)
+  }
+
+  if (filterDate) {
+    // Assuming filterDate is YYYY-MM-DD, filter for that whole day in East Africa Time (UTC+3)
+    dbQuery = dbQuery
+      .gte("created_at", `${filterDate}T00:00:00+03:00`)
+      .lte("created_at", `${filterDate}T23:59:59+03:00`)
   }
 
   const { data: credits, error } = await dbQuery
@@ -72,8 +80,23 @@ export default async function CreditAccountsPage({
         </div>
       </div>
 
-      <div className="max-w-sm">
+      <div className="max-w-sm flex items-center gap-3">
         <LiveSearch placeholder="Raadi Macmiil..." />
+        <form method="GET" className="flex items-center gap-2">
+          {query && <input type="hidden" name="q" value={query} />}
+          <input 
+            type="date" 
+            name="date"
+            defaultValue={filterDate}
+            onChange={(e) => e.target.form?.submit()}
+            className="h-10 px-3 py-2 text-sm rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent text-slate-700 bg-white"
+          />
+          {filterDate && (
+            <Link href={`/credit${query ? `?q=${query}` : ''}`} className="text-xs text-rose-500 hover:underline shrink-0">
+              Nadiifi (Clear)
+            </Link>
+          )}
+        </form>
       </div>
 
       <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
@@ -117,7 +140,7 @@ export default async function CreditAccountsPage({
                   </TableCell>
                   <TableCell className="text-slate-600">{credit.description || "—"}</TableCell>
                   <TableCell className="text-slate-500 text-xs whitespace-nowrap">
-                    <div>{new Date(credit.created_at).toLocaleDateString("so-SO", { day: "2-digit", month: "short", year: "numeric", timeZone: "Africa/Nairobi" })}</div>
+                    <div>{new Date(credit.created_at).toLocaleDateString("en-GB", { day: "2-digit", month: "2-digit", year: "numeric", timeZone: "Africa/Nairobi" })}</div>
                     <div className="text-slate-400">{new Date(credit.created_at).toLocaleTimeString("so-SO", { hour: "2-digit", minute: "2-digit", timeZone: "Africa/Nairobi" })}</div>
                   </TableCell>
                   <TableCell className="text-right font-bold text-rose-600">
