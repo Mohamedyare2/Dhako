@@ -2,13 +2,22 @@ import { createClient } from "@/lib/supabase/server"
 import { Button } from "@/components/ui/button"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
-import { Plus, ShoppingCart } from "lucide-react"
+import { Plus, ShoppingCart, Undo2 } from "lucide-react"
 import { LiveSearch } from "@/components/ui/live-search"
 import Link from "next/link"
+import { undoSale } from "./actions"
 
 export default async function SalesPage() {
   const supabase = createClient()
   
+  // Verify admin role
+  const { data: { user } } = await supabase.auth.getUser()
+  let isAdmin = false
+  if (user) {
+    const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single()
+    isAdmin = profile?.role === 'admin'
+  }
+
   const { data: sales, error } = await supabase
     .from("sales")
     .select("*, customers(name)")
@@ -42,20 +51,21 @@ export default async function SalesPage() {
               <TableHead className="font-semibold text-slate-700">Customer</TableHead>
               <TableHead className="text-right font-semibold text-slate-700">Total Amount</TableHead>
               <TableHead className="text-right font-semibold text-slate-700">Balance Due</TableHead>
-              <TableHead className="font-semibold text-slate-700 pr-6">Status</TableHead>
+              <TableHead className="font-semibold text-slate-700">Status</TableHead>
+              <TableHead className="text-right font-semibold text-slate-700 pr-6">Action</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {error && (
               <TableRow>
-                <TableCell colSpan={5} className="h-24 text-center text-rose-600 bg-rose-50/50">
+                <TableCell colSpan={6} className="h-24 text-center text-rose-600 bg-rose-50/50">
                   ⚠️ Failed to load sales: {error.message}
                 </TableCell>
               </TableRow>
             )}
             {!error && sales?.length === 0 && (
               <TableRow>
-                <TableCell colSpan={5} className="py-16 text-center">
+                <TableCell colSpan={6} className="py-16 text-center">
                   <ShoppingCart className="h-8 w-8 text-slate-300 mx-auto mb-2" />
                   <p className="text-sm text-slate-400">No sales recorded yet</p>
                 </TableCell>
@@ -77,7 +87,7 @@ export default async function SalesPage() {
                     <span className="text-slate-300">—</span>
                   )}
                 </TableCell>
-                <TableCell className="pr-6">
+                <TableCell>
                   <Badge
                     className={`rounded-full text-xs font-medium px-2.5 py-0.5 border-0 ${
                       sale.payment_status === 'paid'
@@ -89,6 +99,25 @@ export default async function SalesPage() {
                   >
                     {sale.payment_status}
                   </Badge>
+                </TableCell>
+                <TableCell className="text-right pr-6">
+                  {isAdmin && (
+                    <form>
+                      <Button
+                        formAction={async () => {
+                          "use server"
+                          await undoSale(sale.id)
+                        }}
+                        variant="outline"
+                        size="sm"
+                        className="text-rose-600 border-rose-200 hover:bg-rose-50"
+                        title="Undo Sale (Celinta Alaabta)"
+                      >
+                        <Undo2 className="h-4 w-4 mr-2" />
+                        Undo
+                      </Button>
+                    </form>
+                  )}
                 </TableCell>
               </TableRow>
             ))}
