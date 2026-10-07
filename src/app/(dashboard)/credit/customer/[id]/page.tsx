@@ -5,7 +5,6 @@ import { CreditCard, ArrowLeft } from "lucide-react"
 import Link from "next/link"
 import PayCustomerDebtDialog from "../../pay-dialog"
 import { EditCustomerDebtDialog } from "../../edit-dialog"
-import { Button } from "@/components/ui/button"
 
 export default async function CustomerProfilePage({ params }: { params: { id: string } }) {
   const supabase = createClient()
