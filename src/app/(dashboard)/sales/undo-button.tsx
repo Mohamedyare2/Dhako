@@ -24,10 +24,10 @@ export function UndoButton({ saleId }: { saleId: string }) {
         variant: "default",
         className: "bg-emerald-50 text-emerald-900 border-emerald-200"
       })
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         title: "Cillad ayaa dhacday",
-        description: error.message || "Waa lagu guuldareystay in la tirtiro iibka.",
+        description: error instanceof Error ? error.message : "Waa lagu guuldareystay in la tirtiro iibka.",
         variant: "destructive"
       })
     } finally {
