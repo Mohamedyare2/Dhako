@@ -196,6 +196,7 @@ export default function NewSaleForm({ products, customers }: { products: Product
       // 4. Create Credit Account if credit or partial
       if (paymentStatus === 'credit' || paymentStatus === 'partial') {
         const { error: creditError } = await supabase.from("credit_accounts").insert({
+          sale_id: saleData.id,
           customer_id: finalCustomerId,
           customer_name_raw: finalCustomerRaw || customerDisplay,
           amount_owed: totalAmount,
