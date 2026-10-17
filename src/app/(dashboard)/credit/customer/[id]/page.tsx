@@ -33,46 +33,68 @@ export default async function CustomerProfilePage({ params }: { params: { id: st
 
   const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(decodedId)
 
-  // Build query based on identifier type
+  // Determine customer info and identifiers
+  let targetName = decodedId
+  let targetPhone: string | null = null
+  let customerUUID: string | null = isUUID ? decodedId : null
+
+  if (isUUID) {
+    const { data: customerRecord } = await supabase
+      .from("customers")
+      .select("id, name, phone")
+      .eq("id", decodedId)
+      .maybeSingle()
+
+    if (customerRecord) {
+      targetName = customerRecord.name
+      targetPhone = customerRecord.phone
+    }
+  } else {
+    const { data: customerRecord } = await supabase
+      .from("customers")
+      .select("id, name, phone")
+      .ilike("name", decodedId.trim())
+      .maybeSingle()
+
+    if (customerRecord) {
+      customerUUID = customerRecord.id
+      targetName = customerRecord.name
+      targetPhone = customerRecord.phone
+    }
+  }
+
+  // Build query to find ALL credit records for this customer
   let dbQuery = supabase
     .from("credit_accounts")
     .select("*, customers(name, phone)")
     .order("created_at", { ascending: false })
 
-  if (isUUID) {
-    // It could be a customer UUID - check both customer_id and credit_accounts.id
-    dbQuery = dbQuery.eq("customer_id", decodedId)
+  if (customerUUID && targetName && targetName !== customerUUID) {
+    dbQuery = dbQuery.or(`customer_id.eq.${customerUUID},customer_name_raw.ilike.${targetName.trim()}`)
+  } else if (customerUUID) {
+    dbQuery = dbQuery.eq("customer_id", customerUUID)
   } else {
-    // It's a raw name string
-    dbQuery = dbQuery.eq("customer_name_raw", decodedId)
+    dbQuery = dbQuery.ilike("customer_name_raw", targetName.trim())
   }
 
   const { data: credits, error } = await dbQuery
 
-  // If no results and it's a UUID, it might be a credit account ID - show 404
+  // If no results and customer does not exist in customers table, return 404
   if (!error && (!credits || credits.length === 0)) {
-    // Try checking if any credits exist at all with a looser query
-    if (isUUID) {
-      // Maybe the customer exists in customers table but has different credit records
-      const { data: customerInfo } = await supabase
-        .from("customers")
-        .select("id, name, phone")
-        .eq("id", decodedId)
-        .single()
-      
-      if (!customerInfo) {
-        notFound()
-      }
+    if (isUUID && !targetPhone && targetName === decodedId) {
+      notFound()
     }
   }
 
-  // Determine customer name and info
+  // Determine final customer display name and phone
   const customerName =
-    credits?.[0]?.customers?.name ||
-    credits?.[0]?.customer_name_raw ||
-    decodedId
+    targetName !== decodedId
+      ? targetName
+      : credits?.[0]?.customers?.name ||
+        credits?.[0]?.customer_name_raw ||
+        decodedId
 
-  const customerPhone = credits?.[0]?.customers?.phone || null
+  const customerPhone = targetPhone || credits?.[0]?.customers?.phone || null
 
   // Calculate per-customer totals
   const totalOwed = credits?.reduce((sum, c) => sum + Number(c.amount_owed), 0) ?? 0

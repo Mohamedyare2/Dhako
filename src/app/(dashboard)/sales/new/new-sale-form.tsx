@@ -53,7 +53,7 @@ export default function NewSaleForm({ products, customers }: { products: Product
   const [customerNameRaw, setCustomerNameRaw] = useState("");
   const [paymentStatus, setPaymentStatus] = useState("paid");
   const [amountPaid, setAmountPaid] = useState("");
-  const [discountPercent, setDiscountPercent] = useState(0);
+  const [discountFixed, setDiscountFixed] = useState("");
   const [showQuotation, setShowQuotation] = useState(false);
 
   // Search filter
@@ -69,8 +69,9 @@ export default function NewSaleForm({ products, customers }: { products: Product
   );
 
   const subtotalAmount = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-  const discountAmount = subtotalAmount * (discountPercent / 100);
-  const totalAmount = subtotalAmount - discountAmount;
+  const parsedDiscount = parseFloat(discountFixed) || 0;
+  const discountAmount = Math.min(subtotalAmount, Math.max(0, parsedDiscount));
+  const totalAmount = Math.max(0, subtotalAmount - discountAmount);
 
   const handleAddToCart = () => {
     if (!selectedProductId) return;
@@ -196,13 +197,13 @@ export default function NewSaleForm({ products, customers }: { products: Product
       // 4. Create Credit Account if credit or partial
       if (paymentStatus === 'credit' || paymentStatus === 'partial') {
         const { error: creditError } = await supabase.from("credit_accounts").insert({
-          sale_id: saleData.id,
           customer_id: finalCustomerId,
           customer_name_raw: finalCustomerRaw || customerDisplay,
           amount_owed: totalAmount,
           amount_paid: paidAmt,
           status: 'open',
-          description: `Deyn iib: ${cart.map(c => c.product.name).join(", ")}`
+          description: `Deyn iib: ${cart.map(c => c.product.name).join(", ")}`,
+          notes: `sale_id:${saleData.id}`
         });
         if (creditError) throw new Error(creditError.message);
       }
@@ -246,7 +247,7 @@ export default function NewSaleForm({ products, customers }: { products: Product
     setAmountPaid("");
     setPaymentStatus("paid");
     setIsWalkIn(true);
-    setDiscountPercent(0);
+    setDiscountFixed("");
     setShowQuotation(false);
     setCustomerSearch("");
     router.refresh();
@@ -415,10 +416,10 @@ export default function NewSaleForm({ products, customers }: { products: Product
                 <span className="text-slate-500">Wadarta Asal (Subtotal)</span>
                 <span className="font-semibold text-slate-900">${subtotalAmount.toFixed(2)}</span>
               </div>
-              {discountPercent > 0 && (
+              {discountAmount > 0 && (
                 <>
                   <div className="flex justify-between text-sm">
-                    <span className="text-slate-500 flex items-center gap-1"><Tag className="h-3 w-3" />Qiimo Dhimis ({discountPercent}%)</span>
+                    <span className="text-slate-500 flex items-center gap-1"><Tag className="h-3 w-3 text-rose-500" />Qiimo Dhimis</span>
                     <span className="font-semibold text-rose-500">-${discountAmount.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between items-center pt-2 border-t border-slate-200">
@@ -427,7 +428,7 @@ export default function NewSaleForm({ products, customers }: { products: Product
                   </div>
                 </>
               )}
-              {discountPercent === 0 && (
+              {discountAmount === 0 && (
                 <div className="flex justify-between items-center pt-2 border-t border-slate-200">
                   <span className="text-sm font-bold text-slate-700">Wadarta Guud</span>
                   <span className="text-lg font-black text-emerald-600">${totalAmount.toFixed(2)}</span>
@@ -590,15 +591,15 @@ export default function NewSaleForm({ products, customers }: { products: Product
           <div className="p-5 border-t border-slate-100 bg-slate-50 space-y-5">
             {/* Subtotal & Discount */}
             <div className="space-y-2">
-              {discountPercent > 0 && (
+              {discountAmount > 0 && (
                 <div className="flex justify-between items-center text-sm">
                   <span className="text-slate-500">Wadarta Asal</span>
                   <span className="font-semibold text-slate-600">${subtotalAmount.toFixed(2)}</span>
                 </div>
               )}
-              {discountPercent > 0 && (
+              {discountAmount > 0 && (
                 <div className="flex justify-between items-center text-sm">
-                  <span className="text-slate-500 flex items-center gap-1"><Tag className="h-3.5 w-3.5 text-rose-400" />Qiimo Dhimis ({discountPercent}%)</span>
+                  <span className="text-slate-500 flex items-center gap-1"><Tag className="h-3.5 w-3.5 text-rose-400" />Qiimo Dhimis</span>
                   <span className="font-semibold text-rose-500">-${discountAmount.toFixed(2)}</span>
                 </div>
               )}
@@ -611,18 +612,17 @@ export default function NewSaleForm({ products, customers }: { products: Product
             {/* Discount input */}
             <div className="flex items-center gap-2 p-3 bg-white rounded-xl border border-slate-200">
               <Tag className="h-4 w-4 text-slate-400 shrink-0" />
-              <Label className="text-xs font-medium text-slate-600 shrink-0">Qiimo Dhimis %</Label>
+              <Label className="text-xs font-medium text-slate-600 shrink-0">Qiimo Dhimis ($)</Label>
               <Input
                 type="number"
                 min={0}
-                max={100}
-                step={1}
-                value={discountPercent || ""}
-                onChange={e => setDiscountPercent(Math.min(100, Math.max(0, parseFloat(e.target.value) || 0)))}
-                placeholder="0"
+                step="0.01"
+                value={discountFixed}
+                onChange={e => setDiscountFixed(e.target.value)}
+                placeholder="0.00"
                 className="h-8 text-sm border-slate-200 focus:border-slate-900 bg-slate-50 flex-1"
               />
-              <span className="text-xs text-slate-400 shrink-0">%</span>
+              <span className="text-xs font-semibold text-slate-500 shrink-0">$</span>
             </div>
 
             {/* Quotation Button */}

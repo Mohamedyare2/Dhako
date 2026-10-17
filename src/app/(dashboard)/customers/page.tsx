@@ -5,6 +5,7 @@ import { LiveSearch } from "@/components/ui/live-search"
 import { AddCustomerDialog, EditCustomerDialog } from "./customer-dialogs"
 import { Button } from "@/components/ui/button"
 import { deleteCustomer } from "./actions"
+import Link from "next/link"
 
 export default async function CustomersPage({
   searchParams,
@@ -30,12 +31,18 @@ export default async function CustomersPage({
 
   const { data: customers, error } = await dbQuery
 
+  // Fetch open credits to display outstanding debt per customer
+  const { data: openCredits } = await supabase
+    .from("credit_accounts")
+    .select("customer_id, customer_name_raw, amount_owed, amount_paid, status")
+    .neq("status", "settled")
+
   return (
     <div className="space-y-6 fade-in">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-2xl font-bold tracking-tight text-slate-900">Macaamiisha (Customers)</h2>
-          <p className="text-slate-500 text-sm mt-0.5">Liiska macaamiisha meheradda</p>
+          <p className="text-slate-500 text-sm mt-0.5">Liiska macaamiisha meheradda iyo deymaha lagu leeyahay</p>
         </div>
         <AddCustomerDialog />
       </div>
@@ -51,60 +58,88 @@ export default async function CustomersPage({
               <TableHead className="font-semibold text-slate-700 pl-6">Magaca (Name)</TableHead>
               <TableHead className="font-semibold text-slate-700">Telefoonka (Phone)</TableHead>
               <TableHead className="font-semibold text-slate-700">Faahfaahin (Notes)</TableHead>
+              <TableHead className="font-semibold text-slate-700 text-right">Deynta (Debt)</TableHead>
               <TableHead className="font-semibold text-slate-700 text-right pr-6">Action</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {error && (
               <TableRow>
-                <TableCell colSpan={4} className="h-24 text-center text-rose-600 bg-rose-50/50">
+                <TableCell colSpan={5} className="h-24 text-center text-rose-600 bg-rose-50/50">
                   Cillad: {error.message}
                 </TableCell>
               </TableRow>
             )}
             {!error && customers?.length === 0 && (
               <TableRow>
-                <TableCell colSpan={4} className="py-16 text-center">
+                <TableCell colSpan={5} className="py-16 text-center">
                   <Users className="h-8 w-8 text-slate-300 mx-auto mb-2" />
                   <p className="text-sm text-slate-400">Macaamiil ma jiraan</p>
                 </TableCell>
               </TableRow>
             )}
-            {customers?.map((c) => (
-              <TableRow key={c.id} className="table-row-hover border-b border-slate-100 last:border-0">
-                <TableCell className="pl-6 py-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-sm font-semibold text-slate-600 shrink-0">
-                      {c.name?.charAt(0)?.toUpperCase() || "?"}
-                    </div>
-                    <span className="font-medium text-slate-900">{c.name}</span>
-                  </div>
-                </TableCell>
-                <TableCell className="text-slate-600 font-medium">{c.phone || "—"}</TableCell>
-                <TableCell className="text-slate-500 text-sm">{c.notes || "—"}</TableCell>
-                <TableCell className="text-right pr-6">
-                  <div className="flex items-center justify-end gap-2">
-                    <EditCustomerDialog customer={c} />
-                    {isAdmin && (
-                      <form>
-                        <Button 
-                          formAction={async () => {
-                            "use server"
-                            await deleteCustomer(c.id)
-                          }} 
-                          variant="outline" 
-                          size="sm" 
-                          className="rounded-lg border-rose-200 text-rose-600 hover:bg-rose-50 hover:border-rose-300 h-8 px-2"
-                          title="Delete Customer"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
-                      </form>
+            {customers?.map((c) => {
+              const customerCredits = openCredits?.filter(
+                credit => credit.customer_id === c.id || (credit.customer_name_raw && credit.customer_name_raw.toLowerCase().trim() === c.name.toLowerCase().trim())
+              ) || []
+              const debtTotal = customerCredits.reduce((sum, cr) => sum + (Number(cr.amount_owed) - Number(cr.amount_paid)), 0)
+
+              return (
+                <TableRow key={c.id} className="table-row-hover border-b border-slate-100 last:border-0">
+                  <TableCell className="pl-6 py-4">
+                    <Link
+                      href={`/credit/customer/${c.id}`}
+                      className="flex items-center gap-3 group"
+                      title="Guji si aad u furto Profile-ka macmiilkan"
+                    >
+                      <div className="w-8 h-8 rounded-full bg-slate-100 group-hover:bg-blue-100 flex items-center justify-center text-sm font-semibold text-slate-600 group-hover:text-blue-700 transition-colors shrink-0">
+                        {c.name?.charAt(0)?.toUpperCase() || "?"}
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="font-medium text-slate-900 group-hover:text-blue-600 transition-colors">{c.name}</span>
+                        <span className="text-[11px] text-blue-600 font-normal group-hover:underline">Eeg Profile →</span>
+                      </div>
+                    </Link>
+                  </TableCell>
+                  <TableCell className="text-slate-600 font-medium">{c.phone || "—"}</TableCell>
+                  <TableCell className="text-slate-500 text-sm">{c.notes || "—"}</TableCell>
+                  <TableCell className="text-right">
+                    {debtTotal > 0 ? (
+                      <Link
+                        href={`/credit/customer/${c.id}`}
+                        className="inline-flex items-center gap-1 font-bold text-rose-600 hover:text-rose-800 hover:underline text-sm"
+                        title="Eeg Profile-ka & Deymaha"
+                      >
+                        ${debtTotal.toFixed(2)}
+                      </Link>
+                    ) : (
+                      <span className="text-slate-400 text-sm">$0.00</span>
                     )}
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))}
+                  </TableCell>
+                  <TableCell className="text-right pr-6">
+                    <div className="flex items-center justify-end gap-2">
+                      <EditCustomerDialog customer={c} />
+                      {isAdmin && (
+                        <form>
+                          <Button 
+                            formAction={async () => {
+                              "use server"
+                              await deleteCustomer(c.id)
+                            }} 
+                            variant="outline" 
+                            size="sm" 
+                            className="rounded-lg border-rose-200 text-rose-600 hover:bg-rose-50 hover:border-rose-300 h-8 px-2"
+                            title="Delete Customer"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </form>
+                      )}
+                    </div>
+                  </TableCell>
+                </TableRow>
+              )
+            })}
           </TableBody>
         </Table>
       </div>

@@ -154,16 +154,27 @@ export default async function CreditAccountsPage({
 
               return (
                 <TableRow key={credit.id} className="table-row-hover border-b border-slate-100 last:border-0">
-                  <TableCell className="font-medium text-slate-900 pl-6 py-4">
+                  <TableCell className="pl-6 py-4">
                     {customerIdentifier ? (
                       <Link
                         href={`/credit/customer/${customerIdentifier}`}
-                        className="hover:text-blue-600 hover:underline"
+                        className="inline-flex items-center gap-2.5 font-medium text-blue-600 hover:text-blue-800 transition-all group"
+                        title={`Guji si aad u furto Profile-ka ${displayName}`}
                       >
-                        {displayName}
+                        <div className="w-8 h-8 rounded-full bg-blue-50 border border-blue-200/80 text-blue-700 flex items-center justify-center text-xs font-bold shadow-xs group-hover:bg-blue-600 group-hover:text-white group-hover:border-blue-600 transition-all shrink-0">
+                          {displayName.charAt(0).toUpperCase()}
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="font-semibold text-slate-900 group-hover:text-blue-600 leading-tight transition-colors">
+                            {displayName}
+                          </span>
+                          <span className="text-[11px] text-blue-600 font-medium group-hover:underline flex items-center gap-0.5 mt-0.5">
+                            Profile-ka & Taariikhda →
+                          </span>
+                        </div>
                       </Link>
                     ) : (
-                      <span>{displayName}</span>
+                      <span className="font-medium text-slate-800">{displayName}</span>
                     )}
                   </TableCell>
                   <TableCell className="text-slate-600 max-w-[200px] truncate">{credit.description || "—"}</TableCell>

@@ -7,6 +7,23 @@ import { LiveSearch } from "@/components/ui/live-search"
 import Link from "next/link"
 import { UndoButton } from "./undo-button"
 
+function formatDate(dateStr: string) {
+  return new Date(dateStr).toLocaleDateString("en-GB", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    timeZone: "Africa/Nairobi",
+  })
+}
+
+function formatTime(dateStr: string) {
+  return new Date(dateStr).toLocaleTimeString("en-GB", {
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: "Africa/Nairobi",
+  })
+}
+
 export default async function SalesPage() {
   const supabase = createClient()
   
@@ -21,7 +38,7 @@ export default async function SalesPage() {
   const { data: sales, error } = await supabase
     .from("sales")
     .select("*, customers(name)")
-    .order("sale_date", { ascending: false })
+    .order("created_at", { ascending: false })
     .limit(50)
 
   return (
@@ -73,8 +90,9 @@ export default async function SalesPage() {
             )}
             {sales?.map((sale) => (
               <TableRow key={sale.id} className="table-row-hover border-b border-slate-100 last:border-0">
-                <TableCell className="font-medium text-slate-700 pl-6 py-4">
-                  {new Date(sale.sale_date).toLocaleDateString("en-GB", { day: "2-digit", month: "2-digit", year: "numeric", timeZone: "Africa/Nairobi" })}
+                <TableCell className="text-slate-500 text-xs whitespace-nowrap pl-6 py-4">
+                  <div className="font-semibold text-slate-800">{formatDate(sale.created_at || sale.sale_date)}</div>
+                  <div className="text-slate-400 mt-0.5">{formatTime(sale.created_at || sale.sale_date)}</div>
                 </TableCell>
                 <TableCell className="text-slate-600">
                   {sale.customers?.name || sale.customer_name_raw || "Walk-in Customer"}

@@ -93,21 +93,40 @@ export async function undoSale(saleId: string) {
   if (sale.payment_status === "credit" || sale.payment_status === "partial") {
     let creditDeleted = false
 
-    // Primary method: match by sale_id FK (reliable, set when sale was created)
+    // Primary method 1: match by notes containing sale_id (100% reliable)
     try {
-      const { data: creditsBySaleId } = await supabaseAdmin
+      const { data: creditsByNotes } = await supabaseAdmin
         .from("credit_accounts")
         .select("id")
-        .eq("sale_id", saleId)
+        .ilike("notes", `%sale_id:${saleId}%`)
 
-      if (creditsBySaleId && creditsBySaleId.length > 0) {
-        for (const c of creditsBySaleId) {
+      if (creditsByNotes && creditsByNotes.length > 0) {
+        for (const c of creditsByNotes) {
           await supabaseAdmin.from("credit_accounts").delete().eq("id", c.id)
         }
         creditDeleted = true
       }
     } catch {
-      // sale_id column might not exist on older records — fall through to heuristic
+      // notes match fallback
+    }
+
+    // Primary method 2: match by description containing sale id or items
+    if (!creditDeleted) {
+      try {
+        const { data: creditsByDesc } = await supabaseAdmin
+          .from("credit_accounts")
+          .select("id")
+          .ilike("description", `%${saleId}%`)
+
+        if (creditsByDesc && creditsByDesc.length > 0) {
+          for (const c of creditsByDesc) {
+            await supabaseAdmin.from("credit_accounts").delete().eq("id", c.id)
+          }
+          creditDeleted = true
+        }
+      } catch {
+        // description match fallback
+      }
     }
 
     // Fallback: heuristic match by customer + amount + time window
